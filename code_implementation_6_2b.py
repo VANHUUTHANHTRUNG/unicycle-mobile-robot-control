@@ -7,7 +7,7 @@ Ts = 0.01  # Update simulation every 10ms
 t_max = np.pi  # total simulation duration in seconds
 
 # Set initial state
-init_state = np.array([-1., -0.5, np.pi / 8])  # px, py, theta
+init_state = np.array([-1., -0.5, np.pi / 8 + np.pi])  # px, py, theta
 IS_SHOWING_2DVISUALIZATION = True
 
 # Define Field size for plotting (should be in tuple)
@@ -19,11 +19,15 @@ L = .21
 R = .1
 w_max = 10
 
-# Params 2a    ###  Conditions
-k_rho = 2  # k_rho > 0
-k_alpha = 4  # k_alpha > k_rho
-k_beta = -2  # k_beta < 0
 
+def infer_k_beta(k_rho, k_alpha, margin):
+    return 3/5 * (margin + 2*k_rho/np.pi - k_alpha)
+
+
+# Params 2a                                       ###  Conditions
+k_rho = 1.8                                        # k_rho > 0
+k_alpha = 20                                       # k_alpha > k_rho
+k_beta = infer_k_beta(k_rho, k_alpha, margin=-20)  # k_beta < 0
 
 # MAIN SIMULATION COMPUTATION
 # ---------------------------------------------------------------------
@@ -72,17 +76,12 @@ def simulate_control():
                       beta])
         polar_state = e
 
-        # # Linearize the closed-loop system at (0,0,0)
-        # K = np.array([[-k_rho, 0, 0],
-        #               [0, -(k_alpha - k_rho), -k_beta],
-        #               [0, -k_rho, 0]])
-        #
-        # polar_control = K @ e
-
         # Coordinate transformation polar -> cartesian
+        goal_behind = (-np.pi < alpha < -np.pi / 2) or (np.pi / 2 < alpha < np.pi)
         v = k_rho * rho
+        if goal_behind:
+            v = -v
         w = k_alpha * alpha + k_beta * beta
-
         # # Consider rotational limit
         w_left = (2 * v - w * L) / (2 * R)
         w_right = (2 * v + w * L) / (2 * R)
@@ -121,6 +120,7 @@ def simulate_control():
     # End of iterations
     # ---------------------------
     # return the stored value for additional plotting or comparison of parameters
+
     return state_history, goal_history, input_history, w_left_history, w_right_history, polar_state_history
 
 
